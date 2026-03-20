@@ -1,95 +1,313 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>企业级 RAG 知识库</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>企业级 RAG 智能助手</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/html.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/css.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/languages/typescript.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github.min.css" />
+  
   <style>
-    body{max-width:900px;margin:20px auto;padding:20px;font-family:Arial;background:#f7f8fa}
-    .panel{background:white;padding:20px;border-radius:12px;margin-bottom:20px}
-    textarea{width:100%;height:120px;padding:10px;border-radius:8px;border:1px solid #ddd}
-    #chat{height:50vh;overflow-y:auto;padding:10px;background:#f9f9f9;border-radius:8px}
-    .msg{margin:8px;padding:10px;border-radius:8px}
-    .user{background:#007bff;color:white;text-align:right}
-    .bot{background:#e1f5fe;text-align:left}
-    button{padding:10px 20px;background:#007bff;color:white;border:none;border-radius:8px;cursor:pointer}
-    .input-line{display:flex;gap:10px;margin-top:10px}
-    input{flex:1;padding:10px;border-radius:8px;border:1px solid #ddd}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .panel h3 {
+      margin-bottom: 12px;
+      color: #222;
+    }
+
+    #chat {
+      height: 65vh;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #fafbfc;
+      border-radius: 12px;
+    }
+
+    .message {
+      padding: 12px 16px;
+      border-radius: 14px;
+      max-width: 82%;
+      animation: fadeIn 0.2s ease;
+      position: relative;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      background: #007bff;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.bot {
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      white-space: pre-wrap;
+    }
+
+    .message.bot code {
+      background: #f1f3f5;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .message.bot pre {
+      background: #2d2d2d;
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      font-size: 12px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .input-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    #question {
+      flex: 1;
+      padding: 14px 16px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    #question:focus {
+      border-color: #007bff;
+    }
+
+    button {
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: none;
+      background: #007bff;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    #stopBtn {
+      background: #ff4d4f;
+    }
+
+    .file-upload {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px dashed #ccc;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      font-size: 13px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #007bff;
+      animation: loading 1s infinite alternate;
+    }
+
+    @keyframes loading {
+      from { opacity: 0.3; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
+
 <body>
 
-<div class="panel">
-  <h3>📚 上传企业知识库</h3>
-  <textarea id="docContent" placeholder="粘贴文档：接口手册、项目规范、技术方案、合同..."></textarea>
-  <button onclick="uploadDoc()" style="margin-top:10px">构建向量库</button>
-  <div id="uploadStatus"></div>
-</div>
-
-<div class="panel">
-  <h3>💬 RAG 智能问答</h3>
-  <div id="chat"></div>
-  <div class="input-line">
-    <input id="question" placeholder="输入问题..." />
-    <button onclick="ask()">发送</button>
+  <div class="panel">
+    <h3>📚 企业知识库（支持 TXT / MD）</h3>
+    <input type="file" id="file" class="file-upload" accept=".txt,.md" />
+    <button onclick="uploadFile()">上传构建知识库</button>
+    <button onclick="clearKB()" style="background:#ff4d4f">清空知识库</button>
+    <div id="status" class="status"></div>
   </div>
-</div>
 
-<script>
-  const chat = document.getElementById('chat');
+  <div class="panel">
+    <h3>💬 RAG 智能问答</h3>
+    <div id="chat"></div>
 
-  // 上传文档构建知识库
-  async function uploadDoc() {
-    const content = document.getElementById('docContent').value;
-    const res = await fetch('http://localhost:3000/api/rag/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content })
-    });
-    const data = await res.json();
-    document.getElementById('uploadStatus').innerText = data.msg;
-  }
+    <div class="input-bar">
+      <input id="question" placeholder="输入你的问题..." autocomplete="off" />
+      <button id="sendBtn" onclick="ask()">发送</button>
+      <button id="stopBtn" disabled onclick="stopGenerate()">停止</button>
+    </div>
+  </div>
 
-  // RAG 提问
-  async function ask() {
-    const question = document.getElementById('question').value;
-    if (!question) return;
+  <script>
+    const chat = document.getElementById('chat');
+    const sendBtn = document.getElementById('sendBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
 
-    chat.innerHTML += `<div class='msg user'>${question}</div>`;
-    document.getElementById('question').value = '';
+    let controller = null;
+    let buffer = '';
 
-    const bot = document.createElement('div');
-    bot.className = 'msg bot';
-    chat.appendChild(bot);
+    // 上传文件
+    async function uploadFile() {
+      const file = document.getElementById('file').files[0];
+      if (!file) return alert('请选择文件');
+      const form = new FormData();
+      form.append('file', file);
+      status.innerText = '解析中...';
+      const res = await fetch('http://localhost:3000/api/rag/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      status.innerText = data.msg || '上传成功';
+    }
 
-    const res = await fetch('http://localhost:3000/api/rag/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
-    });
+    // 发送提问（✅ 完美流式解析）
+    async function ask() {
+      const text = document.getElementById('question').value.trim();
+      if (!text) return;
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
+      // 显示用户消息
+      chat.innerHTML += `<div class="message user">${text}</div>`;
+      document.getElementById('question').value = '';
 
-    let answer = ''
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n').filter(Boolean);
+      // AI 消息占位
+      const botMsg = document.createElement('div');
+      botMsg.className = 'message bot';
+      botMsg.innerHTML = '<span class="loading"></span> 思考中...';
+      chat.appendChild(botMsg);
+      chat.scrollTop = chat.scrollHeight;
+
+      setLoading(true);
+      buffer = '';
+      controller = new AbortController();
+
+      try {
+        const res = await fetch('http://localhost:3000/api/rag/chat', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: text })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const json = line.replace('data: ', '');
-            if (json === '[DONE]') continue;
+            const l = line.trim();
+            if (!l.startsWith('data: ')) continue;
+            const data = l.replace('data: ', '');
+            if (data === '[DONE]') continue;
+
             try {
-              const data = JSON.parse(json);
-              answer += data.choices[0].delta.content || '';
-              bot.innerText = answer;
+              const json = JSON.parse(data);
+              const content = json.choices?.[0]?.delta?.content || '';
+              fullText += content;
+              botMsg.innerHTML = marked.parse(fullText);
               chat.scrollTop = chat.scrollHeight;
             } catch (e) {}
           }
+        }
+
+      } catch (e) {
+        if (e.name === 'AbortError') botMsg.innerText += ' [已停止]';
+        else botMsg.innerText = '出错：' + e.message;
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-</script>
+
+    // 停止生成
+    function stopGenerate() {
+      controller?.abort();
+      setLoading(false);
+    }
+
+    // 清空知识库
+    async function clearKB() {
+      if (!confirm('确定要清空知识库吗？')) return;
+      await fetch('http://localhost:3000/api/rag/clear', { method: 'POST' });
+      status.innerText = '✅ 已清空知识库';
+    }
+
+    // 加载状态
+    function setLoading(is) {
+      sendBtn.disabled = is;
+      stopBtn.disabled = !is;
+    }
+
+    // 回车发送
+    document.getElementById('question').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') ask();
+    });
+  </script>
 </body>
 </html>
